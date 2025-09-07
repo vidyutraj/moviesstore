@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+{% block content %}
+{% load static %}
+<div class="p-3">
+  <div class="container">
+    <div class="row mt-3">
+      <div class="col-md-6 mx-auto mb-3">
+        <h2>About</h2>
+        <hr />
+        <p>Step into Movies Store, your all-in-one destination for unforgettable entertainment. 
+            From blockbuster premieres to indie treasures and cinematic classics, our digital catalog 
+            has something to spark every mood. Rent or buy in seconds and start streaming instantly 
+            in crisp, high-definition quality.</p>
+
+        <p>Enjoy the freedom to watch your way—on the big screen at home or on the go with your 
+          tablet or phone. Our smart browsing tools and tailored recommendations make discovering 
+          your next favorite film effortless, turning every movie night into something special.</p>
+
+      </div>
+      <div class="col-md-6 mx-auto mb-3 text-center">
+        <img src="{% static 'img/about.jpg' %}" class="max-width-100" alt="about" />
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}
