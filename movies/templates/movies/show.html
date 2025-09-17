@@ -38,16 +38,38 @@
               {{ review.date }}
             </h6>
             <p class="card-text">{{ review.comment }}</p>
-            {% if user.is_authenticated and user == review.user %}
-            <a class="btn btn-primary"
-              href="{% url 'movies.edit_review' id=template_data.movie.id review_id=review.id %}">
-              Edit
-            </a>
-            <a class="btn btn-danger"
-              href="{% url 'movies.delete_review' id=template_data.movie.id review_id=review.id %}">
-              Delete
-            </a>
-            {% endif %}
+            
+            <!-- Like Section -->
+            <div class="d-flex justify-content-between align-items-center mt-2">
+              <div class="like-section">
+                {% if user.is_authenticated %}
+                <button class="btn btn-outline-primary btn-sm like-btn" 
+                        data-review-id="{{ review.id }}"
+                        data-liked="{% if review.user_liked %}true{% else %}false{% endif %}">
+                  <i class="fas fa-heart {% if review.user_liked %}text-danger{% else %}text-muted{% endif %}"></i>
+                  <span class="like-count">{{ review.get_like_count }}</span>
+                </button>
+                {% else %}
+                <span class="btn btn-outline-secondary btn-sm disabled">
+                  <i class="fas fa-heart text-muted"></i>
+                  <span class="like-count">{{ review.get_like_count }}</span>
+                </span>
+                {% endif %}
+              </div>
+              
+              {% if user.is_authenticated and user == review.user %}
+              <div>
+                <a class="btn btn-primary btn-sm"
+                  href="{% url 'movies.edit_review' id=template_data.movie.id review_id=review.id %}">
+                  Edit
+                </a>
+                <a class="btn btn-danger btn-sm"
+                  href="{% url 'movies.delete_review' id=template_data.movie.id review_id=review.id %}">
+                  Delete
+                </a>
+              </div>
+              {% endif %}
+            </div>
           </li>
           {% endfor %}
         </ul>
@@ -85,4 +107,51 @@
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const likeButtons = document.querySelectorAll('.like-btn');
+    
+    likeButtons.forEach(button => {
+        button.addEventListener('click', function() {
+            const reviewId = this.dataset.reviewId;
+            const isLiked = this.dataset.liked === 'true';
+            const heartIcon = this.querySelector('i');
+            const likeCount = this.querySelector('.like-count');
+            
+            // Make AJAX request to toggle like
+            fetch(`/movies/review/${reviewId}/like/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    console.error('Error:', data.error);
+                    return;
+                }
+                
+                // Update button state
+                this.dataset.liked = data.liked;
+                likeCount.textContent = data.like_count;
+                
+                // Update heart icon
+                if (data.liked) {
+                    heartIcon.classList.remove('text-muted');
+                    heartIcon.classList.add('text-danger');
+                } else {
+                    heartIcon.classList.remove('text-danger');
+                    heartIcon.classList.add('text-muted');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    });
+});
+</script>
 {% endblock content %}
