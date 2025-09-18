@@ -10,6 +10,7 @@
         <p><b>Description:</b> {{ template_data.movie.description }}</p>
         <p><b>Price:</b> ${{ template_data.movie.price }}</p>
         <p class="card-text">
+          {% if user.is_authenticated %}
           <form method="post" action="{% url 'cart.add' id=template_data.movie.id %}">
             <div class="row">
               {% csrf_token %}
@@ -20,10 +21,28 @@
                 </div>
               </div>
               <div class="col-auto">
+                <select class="form-select" name="cart_id" required>
+                  <option value="">Select a cart</option>
+                  {% for cart in user.cart_set.all %}
+                  <option value="{{ cart.id }}">{{ cart.name }} ({{ cart.get_item_count }} items)</option>
+                  {% endfor %}
+                </select>
+              </div>
+              <div class="col-auto">
                 <button class="btn bg-dark text-white" type="submit">Add to cart</button>
               </div>
             </div>
           </form>
+          <div class="mt-2">
+            <small class="text-muted">
+              Don't have a cart? <a href="{% url 'cart.index' %}">Create one here</a>
+            </small>
+          </div>
+          {% else %}
+          <div class="alert alert-warning">
+            <a href="{% url 'accounts.login' %}">Login</a> to add movies to your cart.
+          </div>
+          {% endif %}
         </p>
 
         <h2>Reviews</h2>

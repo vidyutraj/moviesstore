@@ -1,0 +1,106 @@
+{% extends 'base.html' %}
+{% block content %}
+{% load static %}
+<div class="p-3">
+  <div class="container">
+    <div class="row mt-3">
+      <div class="col mx-auto mb-3">
+        <div class="d-flex justify-content-between align-items-center">
+          <h2>{{ template_data.cart.name }}</h2>
+          <a href="{% url 'cart.index' %}" class="btn btn-outline-secondary">← Back to All Carts</a>
+        </div>
+        <hr />
+      </div>
+    </div>
+
+    {% if template_data.cart_items %}
+    <div class="row m-1">
+      <table class="table table-bordered table-striped text-center">
+        <thead>
+          <tr>
+            <th scope="col">Movie</th>
+            <th scope="col">Price</th>
+            <th scope="col">Quantity</th>
+            <th scope="col">Subtotal</th>
+            <th scope="col">Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for item in template_data.cart_items %}
+          <tr>
+            <td>
+              <div class="d-flex align-items-center">
+                <img src="{{ item.movie.image.url }}" class="rounded me-3" style="width: 50px; height: 70px; object-fit: cover;">
+                <div>
+                  <strong>{{ item.movie.name }}</strong>
+                </div>
+              </div>
+            </td>
+            <td>${{ item.price }}</td>
+            <td>
+              <form method="post" action="{% url 'cart.update_item' template_data.cart.id item.id %}" class="d-inline">
+                {% csrf_token %}
+                <div class="input-group" style="width: 120px;">
+                  <input type="number" min="1" max="10" class="form-control form-control-sm" name="quantity" value="{{ item.quantity }}">
+                  <button class="btn btn-outline-primary btn-sm" type="submit">Update</button>
+                </div>
+              </form>
+            </td>
+            <td>${{ item.get_subtotal }}</td>
+            <td>
+              <a href="{% url 'cart.remove_item' template_data.cart.id item.id %}" 
+                 class="btn btn-danger btn-sm" 
+                 onclick="return confirm('Remove {{ item.movie.name }} from cart?')">
+                Remove
+              </a>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="row">
+      <div class="col-md-8">
+        <div class="d-flex gap-2">
+          <a href="{% url 'cart.clear' template_data.cart.id %}" 
+             class="btn btn-warning" 
+             onclick="return confirm('Clear all items from this cart?')">
+            Clear Cart
+          </a>
+          <a href="{% url 'cart.delete' template_data.cart.id %}" 
+             class="btn btn-danger" 
+             onclick="return confirm('Delete this cart permanently?')">
+            Delete Cart
+          </a>
+        </div>
+      </div>
+      <div class="col-md-4 text-end">
+        <div class="card">
+          <div class="card-body">
+            <h5 class="card-title">Cart Summary</h5>
+            <p class="card-text">
+              <strong>Items:</strong> {{ template_data.item_count }}<br>
+              <strong>Total:</strong> ${{ template_data.cart_total }}
+            </p>
+            <a href="{% url 'cart.purchase' template_data.cart.id %}" class="btn btn-success btn-lg w-100">
+              Checkout
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+    {% else %}
+    <div class="row">
+      <div class="col-12">
+        <div class="alert alert-info text-center">
+          <h4>Cart is Empty</h4>
+          <p>This cart doesn't have any movies yet.</p>
+          <a href="{% url 'movies.index' %}" class="btn btn-primary">Browse Movies</a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock content %}

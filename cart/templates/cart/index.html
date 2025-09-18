@@ -1,49 +1,81 @@
 {% extends 'base.html' %}
 {% block content %}
 {% load static %}
-{% load cart_filters %}
 <div class="p-3">
   <div class="container">
     <div class="row mt-3">
       <div class="col mx-auto mb-3">
-        <h2>Shopping Cart</h2>
+        <h2>My Shopping Carts</h2>
         <hr />
       </div>
     </div>
-    <div class="row m-1">
-      <table class="table table-bordered table-striped text-center">
-        <thead>
-          <tr>
-            <th scope="col">ID</th>
-            <th scope="col">Name</th>
-            <th scope="col">Price</th>
-            <th scope="col">Quantity</th>
-          </tr>
-        </thead>
-        <tbody>
-          {% for movie in template_data.movies_in_cart %}
-          <tr>
-            <td>{{ movie.id }}</td>
-            <td>{{ movie.name }}</td>
-            <td>${{ movie.price }}</td>
-            <td>{{ request.session.cart|get_quantity:movie.id }}</td>
-          </tr>
-          {% endfor %}
-        </tbody>
-      </table>
-    </div>
-    <div class="row">
-      <div class="text-end">
-        <a class="btn btn-outline-secondary mb-2"><b>Total to pay:</b> ${{ template_data.cart_total }}</a>
-        {% if template_data.movies_in_cart|length > 0 %}
-        <a href="{% url 'cart.purchase' %}" class="btn bg-dark text-white mb-2">Purchase</a>
-        <a href="{% url 'cart.clear' %}">
-          <button class="btn btn-danger mb-2">
-            Remove all movies from Cart
-          </button>
-        </a>
-        {% endif %}
+
+    <!-- Create New Cart Form -->
+    <div class="row mb-4">
+      <div class="col-md-6">
+        <div class="card">
+          <div class="card-header">
+            <h5 class="mb-0">Create New Cart</h5>
+          </div>
+          <div class="card-body">
+            {% if template_data.user_carts|length < 3 %}
+            <form method="post" action="{% url 'cart.create' %}">
+              {% csrf_token %}
+              <div class="input-group">
+                <input type="text" class="form-control" name="cart_name" placeholder="Enter cart name" required>
+                <button class="btn btn-primary" type="submit">Create Cart</button>
+              </div>
+            </form>
+            {% else %}
+            <p class="text-muted">You have reached the maximum of 3 carts.</p>
+            {% endif %}
+          </div>
+        </div>
       </div>
+    </div>
+
+    <!-- Display User Carts -->
+    <div class="row">
+      {% for cart in template_data.user_carts %}
+      <div class="col-md-4 mb-4">
+        <div class="card h-100">
+          <div class="card-header d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">{{ cart.name }}</h5>
+            <div class="dropdown">
+              <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                Actions
+              </button>
+              <ul class="dropdown-menu">
+                <li><a class="dropdown-item" href="{% url 'cart.detail' cart.id %}">View Cart</a></li>
+                <li><a class="dropdown-item" href="{% url 'cart.clear' cart.id %}" onclick="return confirm('Clear all items from this cart?')">Clear Cart</a></li>
+                <li><hr class="dropdown-divider"></li>
+                <li><a class="dropdown-item text-danger" href="{% url 'cart.delete' cart.id %}" onclick="return confirm('Delete this cart permanently?')">Delete Cart</a></li>
+              </ul>
+            </div>
+          </div>
+          <div class="card-body">
+            <p class="card-text">
+              <strong>Items:</strong> {{ cart.get_item_count }}<br>
+              <strong>Total:</strong> ${{ cart.get_total }}<br>
+              <strong>Created:</strong> {{ cart.created_at|date:"M d, Y" }}
+            </p>
+          </div>
+          <div class="card-footer">
+            <a href="{% url 'cart.detail' cart.id %}" class="btn btn-primary btn-sm">View Cart</a>
+            {% if cart.get_item_count > 0 %}
+            <a href="{% url 'cart.purchase' cart.id %}" class="btn btn-success btn-sm">Checkout</a>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+      {% empty %}
+      <div class="col-12">
+        <div class="alert alert-info text-center">
+          <h4>No carts yet!</h4>
+          <p>Create your first shopping cart to start adding movies.</p>
+        </div>
+      </div>
+      {% endfor %}
     </div>
   </div>
 </div>
