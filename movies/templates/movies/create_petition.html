@@ -1,0 +1,28 @@
+{% extends 'base.html' %}
+{% block content %}
+<div class="p-3">
+  <div class="container">
+    <div class="row mt-3">
+      <div class="col-md-8 mx-auto mb-3">
+        <h2>Create Movie Petition</h2>
+        <hr />
+        
+        <form method="post">
+          {% csrf_token %}
+          <div class="mb-3">
+            <label for="title" class="form-label">Movie Title</label>
+            <input type="text" class="form-control" id="title" name="title" required>
+          </div>
+          <div class="mb-3">
+            <label for="description" class="form-label">Description</label>
+            <textarea class="form-control" id="description" name="description" rows="5" required></textarea>
+            <div class="form-text">Explain why this movie should be added to our catalog.</div>
+          </div>
+          <button type="submit" class="btn btn-primary">Create Petition</button>
+          <a href="{% url 'movies:petition_list' %}" class="btn btn-secondary">Cancel</a>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock content %}
