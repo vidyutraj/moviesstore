@@ -11,7 +11,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
   </head>
 
-  <body>
+  <body {% if user.is_authenticated %}data-user-authenticated="true"{% endif %}>
     <!-- Header -->
     <nav class="p-3 navbar navbar-dark bg-dark navbar-expand-lg">
       <div class="container">
@@ -28,9 +28,13 @@
             <a class="nav-link" href="{% url 'movies:petition_list' %}">Petitions</a>
             <a class="nav-link" href="{% url 'movies:index' %}">Movies</a>
             <a class="nav-link" href="{% url 'cart.index' %}">Cart</a>
+            <a class="nav-link" href="{% url 'geography.popularity_map' %}">
+                <i class="fas fa-map-marked-alt"></i> Popularity Map
+            </a>
             <div class="vr bg-white mx-2 d-none d-lg-block"></div>
             {% if user.is_authenticated %}
             <a class="nav-link" href="{% url 'accounts.orders' %}">Orders</a>
+            <a class="nav-link" href="{% url 'geography.location_settings' %}">Location</a>
             <a class="nav-link" href="{% url 'accounts.logout' %}">Logout ({{ user.username }})</a>
             {% else %}
             <a class="nav-link" href="{% url 'accounts.login' %}">Login</a>
@@ -83,5 +87,8 @@
       </div>
     </section>
     <!-- Footer -->
+    
+    <!-- Location Popup Script -->
+    <script src="{% static 'js/location_popup.js' %}"></script>
   </body>
 </html>

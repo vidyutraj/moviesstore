@@ -9,6 +9,7 @@ urlpatterns = [
     path('<int:id>/review/create/', views.create_review, name='create_review'),
     path('<int:id>/review/<int:review_id>/edit/', views.edit_review, name='edit_review'),
     path('<int:id>/review/<int:review_id>/delete/', views.delete_review, name='delete_review'),
+    path('<int:id>/rate/', views.submit_rating, name='submit_rating'),
     # Petition URLs
     path('petitions/', views.petition_list, name='petition_list'),
     path('petitions/create/', views.create_petition, name='create_petition'),

@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from .models import Movie, Review, Petition, Vote
+from .models import Movie, Review, Petition, Vote, Rating
 from django.contrib.auth.decorators import login_required
 
 def index(request):
@@ -18,11 +18,21 @@ def index(request):
 def show(request, id):
     movie = Movie.objects.get(id=id)
     reviews = Review.objects.filter(movie=movie)
+    
+    # Get rating information
+    average_rating = movie.get_average_rating()
+    rating_count = movie.get_rating_count()
+    user_rating = movie.get_user_rating(request.user)
+    star_display = movie.get_star_display()
 
     template_data = {}
     template_data['title'] = movie.name
     template_data['movie'] = movie
     template_data['reviews'] = reviews
+    template_data['average_rating'] = average_rating
+    template_data['rating_count'] = rating_count
+    template_data['user_rating'] = user_rating
+    template_data['star_display'] = star_display
     return render(request, 'movies/show.html', {'template_data': template_data})
 
 @login_required
@@ -121,3 +131,37 @@ def vote_petition(request, petition_id):
         messages.success(request, 'Your vote has been recorded!')
     
     return redirect('movies:petition_detail', petition_id=petition.id)
+
+
+@login_required
+def submit_rating(request, id):
+    """Submit or update a user's rating for a movie"""
+    movie = get_object_or_404(Movie, id=id)
+    
+    if request.method == 'POST':
+        rating_value = request.POST.get('rating')
+        
+        if rating_value and rating_value.isdigit():
+            rating_value = int(rating_value)
+            
+            if 1 <= rating_value <= 5:
+                # Get or create the rating
+                rating, created = Rating.objects.get_or_create(
+                    movie=movie,
+                    user=request.user,
+                    defaults={'rating': rating_value}
+                )
+                
+                if not created:
+                    # Update existing rating
+                    rating.rating = rating_value
+                    rating.save()
+                    messages.success(request, f'Your rating has been updated to {rating_value} stars!')
+                else:
+                    messages.success(request, f'Thank you for rating this movie {rating_value} stars!')
+            else:
+                messages.error(request, 'Please select a valid rating between 1 and 5 stars.')
+        else:
+            messages.error(request, 'Please select a rating.')
+    
+    return redirect('movies:show', id=id)

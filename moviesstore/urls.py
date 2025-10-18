@@ -25,6 +25,7 @@ urlpatterns = [
     path('movies/', include('movies.urls')),
     path('accounts/', include('accounts.urls')),
     path('cart/', include('cart.urls')),
+    path('geography/', include('geography.urls')),
 ]
 
 urlpatterns += static(settings.MEDIA_URL,

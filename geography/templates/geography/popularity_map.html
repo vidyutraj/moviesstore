@@ -1,0 +1,288 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container-fluid py-4">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="text-center mb-4">
+                <i class="fas fa-map-marked-alt text-primary"></i>
+                Movie Popularity Map
+            </h1>
+            <p class="text-center text-muted mb-4">
+                Discover which movies are trending in different geographic regions
+            </p>
+        </div>
+    </div>
+    
+    <div class="row">
+        <!-- Map Container -->
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-globe-americas"></i>
+                        Interactive Popularity Map
+                    </h5>
+                </div>
+                <div class="card-body p-0">
+                    <div id="map" style="height: 500px; width: 100%;"></div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Region Details Sidebar -->
+        <div class="col-lg-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0">
+                        <i class="fas fa-chart-line"></i>
+                        <span id="region-title">Select a Region</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div id="region-details">
+                        <div class="text-center text-muted">
+                            <i class="fas fa-map-marker-alt fa-3x mb-3"></i>
+                            <p>Click on a region marker to see trending movies</p>
+                        </div>
+                    </div>
+                    
+                    <div id="trending-movies" style="display: none;">
+                        <h6 class="text-primary mb-3">Top Trending Movies</h6>
+                        <div id="movies-list"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Legend -->
+            <div class="card mt-3">
+                <div class="card-header">
+                    <h6 class="mb-0">
+                        <i class="fas fa-info-circle"></i>
+                        Legend
+                    </h6>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="badge bg-danger me-2" style="width: 20px; height: 20px;"></div>
+                        <small>High Popularity (100+ purchases)</small>
+                    </div>
+                    <div class="d-flex align-items-center mb-2">
+                        <div class="badge bg-warning me-2" style="width: 20px; height: 20px;"></div>
+                        <small>Medium Popularity (50-99 purchases)</small>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <div class="badge bg-success me-2" style="width: 20px; height: 20px;"></div>
+                        <small>Low Popularity (1-49 purchases)</small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<style>
+.movie-card {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 12px;
+    transition: all 0.3s ease;
+}
+
+.movie-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-2px);
+}
+
+.movie-image {
+    width: 60px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+.popularity-badge {
+    font-size: 0.75rem;
+}
+
+.region-info {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+/* Leaflet map customization */
+.leaflet-popup-content {
+    max-width: 250px;
+}
+
+.leaflet-popup-content h6 {
+    color: #007bff;
+    margin-bottom: 8px;
+}
+
+.leaflet-popup-content .movie-item {
+    border-bottom: 1px solid #eee;
+    padding: 4px 0;
+}
+
+.leaflet-popup-content .movie-item:last-child {
+    border-bottom: none;
+}
+</style>
+
+<script>
+// Initialize the map and handle interactions
+document.addEventListener('DOMContentLoaded', function() {
+    // Map data from Django template
+    const popularityData = {{ popularity_data|safe }};
+    
+    // Initialize Leaflet map
+    const map = L.map('map').setView([39.8283, -98.5795], 4); // Center on USA
+    
+    // Add OpenStreetMap tiles
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '© OpenStreetMap contributors'
+    }).addTo(map);
+    
+    // Add markers for each region
+    const markers = {};
+    popularityData.forEach(function(region) {
+        // Determine marker color based on total popularity
+        const totalPurchases = region.top_movies.reduce((sum, movie) => sum + movie.purchase_count, 0);
+        let markerColor = 'green';
+        if (totalPurchases >= 100) markerColor = 'red';
+        else if (totalPurchases >= 50) markerColor = 'orange';
+        
+        // Create custom icon
+        const customIcon = L.divIcon({
+            className: 'custom-marker',
+            html: `<div style="background-color: ${markerColor}; width: 20px; height: 20px; border-radius: 50%; border: 2px solid white; box-shadow: 0 2px 4px rgba(0,0,0,0.3);"></div>`,
+            iconSize: [20, 20],
+            iconAnchor: [10, 10]
+        });
+        
+        // Create marker
+        const marker = L.marker([region.latitude, region.longitude], { icon: customIcon })
+            .addTo(map);
+        
+        // Create popup content
+        let popupContent = `
+            <div>
+                <h6><i class="fas fa-map-marker-alt"></i> ${region.name}</h6>
+                <p class="mb-2"><small class="text-muted">${region.city}, ${region.state || region.country}</small></p>
+                <hr>
+                <div class="trending-movies">
+        `;
+        
+        if (region.top_movies.length > 0) {
+            popupContent += '<strong>Top Movies:</strong><br>';
+            region.top_movies.slice(0, 3).forEach(function(movie) {
+                popupContent += `
+                    <div class="movie-item">
+                        <strong>${movie.name}</strong>
+                        <span class="badge bg-primary popularity-badge ms-1">${movie.purchase_count}</span>
+                    </div>
+                `;
+            });
+        } else {
+            popupContent += '<small class="text-muted">No trending data available</small>';
+        }
+        
+        popupContent += '</div></div>';
+        
+        marker.bindPopup(popupContent);
+        
+        // Add click event for detailed view
+        marker.on('click', function() {
+            loadRegionDetails(region.id);
+        });
+        
+        markers[region.id] = marker;
+    });
+    
+    // Function to load detailed region information
+    function loadRegionDetails(regionId) {
+        fetch(`/geography/region/${regionId}/`)
+            .then(response => response.json())
+            .then(data => {
+                displayRegionDetails(data);
+            })
+            .catch(error => {
+                console.error('Error loading region details:', error);
+                alert('Error loading region data. Please try again.');
+            });
+    }
+    
+    // Function to display region details
+    function displayRegionDetails(data) {
+        const region = data.region;
+        const movies = data.trending_movies;
+        
+        // Update region title
+        document.getElementById('region-title').textContent = region.name;
+        
+        // Update region details
+        const regionDetails = document.getElementById('region-details');
+        regionDetails.innerHTML = `
+            <div class="region-info">
+                <h6><i class="fas fa-map-marker-alt"></i> ${region.name}</h6>
+                <p class="mb-1"><strong>Location:</strong> ${region.city}, ${region.state || region.country}</p>
+                <p class="mb-0"><strong>Population:</strong> ${region.population.toLocaleString()}</p>
+            </div>
+        `;
+        
+        // Update trending movies
+        const moviesList = document.getElementById('movies-list');
+        moviesList.innerHTML = '';
+        
+        if (movies.length > 0) {
+            movies.forEach(function(movie, index) {
+                const movieCard = document.createElement('div');
+                movieCard.className = 'movie-card';
+                movieCard.innerHTML = `
+                    <div class="d-flex align-items-center">
+                        ${movie.image_url ? 
+                            `<img src="${movie.image_url}" alt="${movie.name}" class="movie-image me-3">` :
+                            `<div class="movie-image me-3 bg-light d-flex align-items-center justify-content-center">
+                                <i class="fas fa-film text-muted"></i>
+                            </div>`
+                        }
+                        <div class="flex-grow-1">
+                            <h6 class="mb-1">${movie.name}</h6>
+                            <p class="text-muted small mb-1">${movie.description}</p>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="badge bg-primary">$${movie.price}</span>
+                                <span class="badge bg-success popularity-badge">
+                                    ${movie.purchase_count} purchases
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                moviesList.appendChild(movieCard);
+            });
+            
+            document.getElementById('trending-movies').style.display = 'block';
+        } else {
+            document.getElementById('trending-movies').style.display = 'none';
+            regionDetails.innerHTML += `
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    No trending movie data available for this region.
+                </div>
+            `;
+        }
+    }
+});
+</script>
+
+<!-- Leaflet CSS and JS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" />
+<script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"></script>
+
+{% endblock content %}

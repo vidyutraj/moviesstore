@@ -1,0 +1,296 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card">
+                <div class="card-header">
+                    <h4 class="mb-0">
+                        <i class="fas fa-map-marker-alt"></i>
+                        Location Settings
+                    </h4>
+                </div>
+                <div class="card-body">
+                    {% if user_location %}
+                        <div class="alert alert-success">
+                            <i class="fas fa-check-circle"></i>
+                            <strong>Location Set!</strong> Your location is currently set to <strong>{{ user_location.region.name }}</strong>.
+                        </div>
+                        
+                        <div class="row mb-4">
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-map-marker-alt"></i> Current Location</h6>
+                                <p class="mb-1"><strong>Region:</strong> {{ user_location.region.name }}</p>
+                                <p class="mb-1"><strong>City:</strong> {{ user_location.region.city }}, {{ user_location.region.state|default:user_location.region.country }}</p>
+                                <p class="mb-0"><strong>Population:</strong> {{ user_location.region.population|floatformat:0 }}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h6><i class="fas fa-info-circle"></i> Location Details</h6>
+                                <p class="mb-1"><strong>Latitude:</strong> {{ user_location.latitude|floatformat:4 }}</p>
+                                <p class="mb-1"><strong>Longitude:</strong> {{ user_location.longitude|floatformat:4 }}</p>
+                                <p class="mb-0"><strong>Updated:</strong> {{ user_location.updated_at|date:"M d, Y H:i" }}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>How it works:</strong> When you make purchases, they are automatically attributed to your current region, 
+                            helping to show trending movies in your area on the popularity map.
+                        </div>
+                        
+                    {% else %}
+                        <div class="alert alert-warning">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>No Location Set</strong> - Your location hasn't been set yet.
+                        </div>
+                        
+                        <div class="text-center mb-4">
+                            <i class="fas fa-map-marked-alt fa-3x text-muted mb-3"></i>
+                            <h6>Set Your Location</h6>
+                            <p class="text-muted">
+                                To see trending movies in your area and help improve our regional popularity data, 
+                                please set your location.
+                            </p>
+                        </div>
+                    {% endif %}
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-center">
+                        <button class="btn btn-primary btn-lg" id="setLocationBtn">
+                            <i class="fas fa-location-arrow"></i>
+                            {% if user_location %}Update Location{% else %}Set My Location{% endif %}
+                        </button>
+                        <a href="{% url 'geography.popularity_map' %}" class="btn btn-outline-primary btn-lg">
+                            <i class="fas fa-map"></i>
+                            View Popularity Map
+                        </a>
+                    </div>
+                    
+                    <hr class="my-4">
+                    
+                    <div class="text-center">
+                        <h6 class="text-muted">Privacy Notice</h6>
+                        <p class="small text-muted mb-0">
+                            Your location data is used only to show regional movie trends and is not shared with third parties. 
+                            You can update or remove your location at any time.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Location Modal (reused from location_popup.js) -->
+<div class="modal fade" id="locationModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-primary text-white">
+                <h5 class="modal-title">
+                    <i class="fas fa-map-marker-alt"></i>
+                    {% if user_location %}Update Location{% else %}Set Your Location{% endif %}
+                </h5>
+            </div>
+            <div class="modal-body text-center">
+                <div class="mb-4">
+                    <i class="fas fa-map-marked-alt fa-3x text-primary mb-3"></i>
+                    <h6>Help us show you trending movies in your area!</h6>
+                    <p class="text-muted mb-0">
+                        We'd like to know your location to show you which movies are popular in your region. 
+                        This helps you discover what's trending locally.
+                    </p>
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <small>Your location data is only used to show regional movie trends and is not shared with third parties.</small>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" id="skipLocation">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="enableLocation">
+                    <i class="fas fa-location-arrow"></i> Enable Location
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const setLocationBtn = document.getElementById('setLocationBtn');
+    
+    setLocationBtn.addEventListener('click', function() {
+        const modal = new bootstrap.Modal(document.getElementById('locationModal'));
+        modal.show();
+        
+        // Handle button clicks
+        document.getElementById('enableLocation').addEventListener('click', function() {
+            requestLocation();
+        });
+        
+        document.getElementById('skipLocation').addEventListener('click', function() {
+            modal.hide();
+        });
+        
+        // Handle modal close
+        document.getElementById('locationModal').addEventListener('hidden.bs.modal', function() {
+            // Reset modal state
+            const modalBody = document.querySelector('#locationModal .modal-body');
+            const modalFooter = document.querySelector('#locationModal .modal-footer');
+            
+            modalBody.innerHTML = `
+                <div class="mb-4">
+                    <i class="fas fa-map-marked-alt fa-3x text-primary mb-3"></i>
+                    <h6>Help us show you trending movies in your area!</h6>
+                    <p class="text-muted mb-0">
+                        We'd like to know your location to show you which movies are popular in your region. 
+                        This helps you discover what's trending locally.
+                    </p>
+                </div>
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i>
+                    <small>Your location data is only used to show regional movie trends and is not shared with third parties.</small>
+                </div>
+            `;
+            
+            modalFooter.innerHTML = `
+                <button type="button" class="btn btn-secondary" id="skipLocation">
+                    <i class="fas fa-times"></i> Cancel
+                </button>
+                <button type="button" class="btn btn-primary" id="enableLocation">
+                    <i class="fas fa-location-arrow"></i> Enable Location
+                </button>
+            `;
+        });
+    });
+    
+    function requestLocation() {
+        const enableBtn = document.getElementById('enableLocation');
+        const skipBtn = document.getElementById('skipLocation');
+        
+        // Update button state
+        enableBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Getting location...';
+        enableBtn.disabled = true;
+        skipBtn.disabled = true;
+        
+        // Check if geolocation is supported
+        if (!navigator.geolocation) {
+            showError('Geolocation is not supported by this browser.');
+            return;
+        }
+        
+        // Request location
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                handleLocationSuccess(position.coords);
+            },
+            function(error) {
+                handleLocationError(error);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 300000 // 5 minutes
+            }
+        );
+    }
+    
+    function handleLocationSuccess(coords) {
+        // Send location data to server
+        fetch('/geography/api/set-location/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': getCSRFToken()
+            },
+            body: JSON.stringify({
+                latitude: coords.latitude,
+                longitude: coords.longitude,
+                accuracy: coords.accuracy
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                showSuccess(data.region_name);
+            } else {
+                showError(data.message || 'Failed to set location.');
+            }
+        })
+        .catch(error => {
+            console.error('Error setting location:', error);
+            showError('Failed to save location. Please try again.');
+        });
+    }
+    
+    function handleLocationError(error) {
+        let message = 'Unable to get your location. ';
+        
+        switch(error.code) {
+            case error.PERMISSION_DENIED:
+                message += 'Please allow location access and try again.';
+                break;
+            case error.POSITION_UNAVAILABLE:
+                message += 'Location information is unavailable.';
+                break;
+            case error.TIMEOUT:
+                message += 'Location request timed out.';
+                break;
+            default:
+                message += 'An unknown error occurred.';
+                break;
+        }
+        
+        showError(message);
+    }
+    
+    function showSuccess(regionName) {
+        const modalBody = document.querySelector('#locationModal .modal-body');
+        modalBody.innerHTML = `
+            <div class="text-center">
+                <i class="fas fa-check-circle fa-3x text-success mb-3"></i>
+                <h6 class="text-success">Location Set Successfully!</h6>
+                <p class="mb-0">You're now connected to the <strong>${regionName}</strong> region.</p>
+                <p class="text-muted small mt-2">You can now see trending movies in your area!</p>
+            </div>
+        `;
+        
+        // Hide buttons and show close button
+        document.querySelector('#locationModal .modal-footer').innerHTML = `
+            <button type="button" class="btn btn-success" onclick="location.reload()">
+                <i class="fas fa-check"></i> Great!
+            </button>
+        `;
+    }
+    
+    function showError(message) {
+        const modalBody = document.querySelector('#locationModal .modal-body');
+        modalBody.innerHTML = `
+            <div class="text-center">
+                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                <h6 class="text-warning">Location Access Failed</h6>
+                <p class="text-muted">${message}</p>
+            </div>
+        `;
+        
+        // Reset buttons
+        document.querySelector('#locationModal .modal-footer').innerHTML = `
+            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                <i class="fas fa-times"></i> Cancel
+            </button>
+            <button type="button" class="btn btn-primary" onclick="location.reload()">
+                <i class="fas fa-redo"></i> Try Again
+            </button>
+        `;
+    }
+    
+    function getCSRFToken() {
+        return document.querySelector('[name=csrfmiddlewaretoken]')?.value || 
+               document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    }
+});
+</script>
+{% endblock content %}
